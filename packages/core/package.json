@@ -1,0 +1,30 @@
+{
+  "name": "@yhgame/core",
+  "version": "0.0.0",
+  "description": "Core of Yihai-Game-Creator.",
+  "author": "Guo Kainan",
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "test": "jest --coverage",
+    "build": "vite build"
+  },
+  "main": "./dist/yhgame-core.umd.js",
+  "module": "./dist/yhgame-core.es.js",
+  "types": "./dist/src/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "import": "./dist/yhgame-core.es.js",
+      "require": "./dist/yhgame-core.umd.js"
+    }
+  },
+  "dependencies": {
+    "@yhgame/shared": "^0.0.0",
+    "pixi.js": "^6.1.2"
+  }
+}

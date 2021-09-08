@@ -1,0 +1,11 @@
+node_modules
+dist
+__coverage__
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+yarn.lock*
+package-lock.json*
+

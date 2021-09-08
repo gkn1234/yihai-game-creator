@@ -1,0 +1,26 @@
+{
+  "name": "@yhgame/shared",
+  "version": "0.0.0",
+  "description": "Utilities for Yihai-Game-Creator.",
+  "author": "Guo Kainan",
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "test": "jest --coverage",
+    "build": "vite build"
+  },
+  "main": "./dist/yhgame-shared.umd.js",
+  "module": "./dist/yhgame-shared.es.js",
+  "types": "./dist/src/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "import": "./dist/yhgame-shared.es.js",
+      "require": "./dist/yhgame-shared.umd.js"
+    }
+  }
+}

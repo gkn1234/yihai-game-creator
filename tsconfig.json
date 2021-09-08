@@ -1,0 +1,12 @@
+{
+  "desc": "用于jest进行测试",
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "sourceMap": true,
+    "types": ["jest"]
+  },
+  "include": [
+    "./packages/*/src",
+    "./packages/*/__tests__"
+  ]
+}

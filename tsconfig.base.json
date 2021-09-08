@@ -1,0 +1,21 @@
+{
+  "desc": "默认TS配置文件，供此项目其他TS配置继承",
+  "compilerOptions": {
+    "target": "es2016",
+    "module": "commonjs",
+    "lib": ["esnext", "dom"],
+    "moduleResolution": "node",
+    "strict": true,
+    "allowJs": false,
+    "sourceMap": false,
+    "resolveJsonModule": true,
+    "removeComments": false,
+    "esModuleInterop": true,
+    "noEmitOnError": true,
+    "noUnusedLocals": true,
+    "experimentalDecorators": true,
+    "paths": {
+      "@yhgame/*": ["./packages/*/src"]
+    }
+  }
+}
