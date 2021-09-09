@@ -2,7 +2,7 @@
  * @Autor: Guo Kainan
  * @Date: 2021-09-05 23:42:14
  * @LastEditors: Guo Kainan
- * @LastEditTime: 2021-09-07 18:57:07
+ * @LastEditTime: 2021-09-08 14:46:24
  * @Description: 脚本管理器
  */
 import { Script } from './Script'
@@ -47,7 +47,7 @@ export class ScriptManager {
   }
 
   /** 是否为节点下的脚本控制器 */
-  get isNodeType (): boolean {
+  get isNodeSource (): boolean {
     return this.type === ScriptManagerType.node
   }
 
@@ -101,7 +101,7 @@ export class ScriptManager {
 
   /** 销毁脚本功能 */
   destroy () {
-    if (!this.isNodeType) {
+    if (!this.isNodeSource) {
       console.error('Scripts can only be destroyed by node-type manager!')
       return
     }

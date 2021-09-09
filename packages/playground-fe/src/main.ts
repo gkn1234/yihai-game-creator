@@ -2,7 +2,7 @@
  * @Autor: Guo Kainan
  * @Date: 2021-09-05 16:06:59
  * @LastEditors: Guo Kainan
- * @LastEditTime: 2021-09-07 19:30:00
+ * @LastEditTime: 2021-09-09 14:22:47
  * @Description: 
  */
 
@@ -10,7 +10,6 @@ import { Game, Sprite } from '@yhgame/core'
 import { Texture, utils } from 'pixi.js'
 
 const a = new Game({
-  resizeTo: window
 })
 a.mount()
 console.log(a.App)

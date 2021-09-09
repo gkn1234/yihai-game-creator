@@ -2,7 +2,7 @@
  * @Autor: Guo Kainan
  * @Date: 2021-09-05 19:27:16
  * @LastEditors: Guo Kainan
- * @LastEditTime: 2021-09-08 14:11:26
+ * @LastEditTime: 2021-09-09 15:58:44
  * @Description: 游戏功能模块
  */
 import { Game, game } from './Game'
@@ -18,7 +18,7 @@ import { enableScript, Scriptable } from './script/enableScript'
  */
 export function module (name: string, Module: typeof GameModule, ...args: any[]) {
   return function (Constructor: typeof Game) {
-    Constructor.registerModule(name, Module, args)
+    Constructor.registerModule(name, Module, ...args)
   }
 }
 
@@ -40,8 +40,12 @@ export class GameModule implements Scriptable {
   
   constructor (...args: any[]) {}
 
-  /** 脚本初始化时触发 */
-  onScriptInit (script: Script) {
-    this.$mountScript(script)
-  }
+  /** 模块挂载前触发 */
+  onBeforeMount () {}
+
+  /** 模块挂载后触发 */
+  onMounted () {}
+
+  /** 游戏开始 */
+  onGameStart () {}
 }

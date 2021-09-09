@@ -2,12 +2,11 @@
  * @Autor: Guo Kainan
  * @Date: 2021-09-05 15:18:51
  * @LastEditors: Guo Kainan
- * @LastEditTime: 2021-09-07 19:04:59
+ * @LastEditTime: 2021-09-09 15:59:30
  * @Description: 游戏实例
  */
 import { 
-  Application, 
-  IApplicationOptions,
+  Application,
   AbstractRenderer,
   Renderer,
   Container,
@@ -18,7 +17,11 @@ import {
 import { GameModule } from './GameModule'
 
 /** 游戏配置项 */
-export interface GameOptions extends IApplicationOptions {
+export interface GameOptions {
+  /** 游戏的设计宽度(舞台宽度、场景宽度) */
+  width?: number
+  /** 游戏的设计高度(舞台高度、场景高度) */
+  height?: number
 }
 
 /** 游戏模块暂存数据 */
@@ -26,8 +29,6 @@ export type GameModulesData = Map<string, {
   args: any[]
   Module: typeof GameModule
 }>
-/** 游戏模块存储对象 */
-export type GameModules = Map<string, GameModule>
 
 /** 给指定类注入游戏实例的装饰器 */
 export function game (Constructor: Function) {
@@ -41,6 +42,15 @@ export function game (Constructor: Function) {
   })
 }
 
+/** 解析游戏配置选项 */
+function _resolveGameOptions (options?: GameOptions): Required<GameOptions> {
+  const o: GameOptions = options || {}
+  return {
+    width: o.width || 800,
+    height: o.height || 600
+  }
+}
+
 export class Game {
   /** 单例引用 */
   static __GameInstance__: Game | null = null
@@ -48,11 +58,11 @@ export class Game {
   static _modules: GameModulesData = new Map()
 
   /** PixiJS App实例 */
-  private _app?: Application
+  private _app!: Application
   /** 各种游戏模块 */
-  private _modules: GameModules = new Map()
+  private _modules: Map<string, GameModule> = new Map()
   /** 配置项 */
-  readonly options: GameOptions = {}
+  readonly options!: Required<GameOptions>
 
   constructor (options?: GameOptions) {
     if (Game.__GameInstance__) {
@@ -62,12 +72,17 @@ export class Game {
     // 单例引用，注意顺序不能放到最后，否则模块无法正确获取Game实例
     Game.__GameInstance__ = this
 
-    this.options = options || {}
+    this.options = _resolveGameOptions(options)
 
-    this._app = new Application(options)
+    this._app = new Application({
+      resizeTo: self
+    })
 
     // 初始化模块
     this._initModules()
+
+    // 挂载画布
+    this.mount()
 
     // 开始游戏
     this.start()
@@ -90,7 +105,7 @@ export class Game {
   }
 
   get App (): Application {
-    return this._app as Application
+    return this._app
   }
 
   get Renderer (): Renderer | AbstractRenderer {
@@ -113,7 +128,8 @@ export class Game {
   private _initModules () {
     Game._modules.forEach((value, name: string) => {
       const { Module, args } = value
-      this._modules.set(name, new Module(...args))
+      const module = new Module(...args)
+      this._modules.set(name, module)
     })
   }
 
@@ -122,9 +138,13 @@ export class Game {
    * @param container 挂载容器，H5环境下为body
    */
   mount (container?: HTMLElement) {
+    this.traveModules(module => module.onBeforeMount())
+
     container = container || document.body
     container.innerHTML = ''
     container.appendChild(this.App.view)
+
+    this.traveModules(module => module.onMounted())
   }
 
   /** 获取模块 */
@@ -137,6 +157,8 @@ export class Game {
     this._modules.forEach((module: GameModule) => callback(module))
   }
 
-  /** 开始游戏，虚函数 */
-  start () {}
+  /** 开始游戏 */
+  start () {
+    this.traveModules(module => module.onGameStart())
+  }
 }

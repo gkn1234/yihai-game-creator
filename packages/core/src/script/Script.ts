@@ -2,7 +2,7 @@
  * @Autor: Guo Kainan
  * @Date: 2021-09-05 15:18:23
  * @LastEditors: Guo Kainan
- * @LastEditTime: 2021-09-07 21:08:22
+ * @LastEditTime: 2021-09-08 16:22:52
  * @Description: 脚本对象基类
  */
 import { game, Game } from '../Game'
@@ -42,13 +42,13 @@ export class Script {
   /** 初始化脚本，挂载到游戏模块上，以继承基础功能 */
   private _init () {
     this.Game.traveModules((module: GameModule) => {
-      module.onScriptInit(this)
+      module.$mountScript(this)
     })
   }
 
   /** 脚本挂载到某个管理器 */
   mount (scriptManager: ScriptManager) {
-    if (scriptManager.isNodeType) {
+    if (scriptManager.isNodeSource) {
       if (this._nodeManagers) {
         console.error('Duplicated mounting on the same node is invalid!')
         return
@@ -66,7 +66,7 @@ export class Script {
 
   /** 脚本从某个管理器上卸载 */
   unmount (scriptManager: ScriptManager) {
-    if (scriptManager.isNodeType) {
+    if (scriptManager.isNodeSource) {
       if (!this._nodeManagers) {
         // 无需重复卸载
         return

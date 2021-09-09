@@ -2,7 +2,7 @@
  * @Autor: Guo Kainan
  * @Date: 2021-09-05 15:21:19
  * @LastEditors: Guo Kainan
- * @LastEditTime: 2021-09-06 14:15:21
+ * @LastEditTime: 2021-09-08 15:56:25
  * @Description: 
 -->
 # core核心设计
@@ -24,3 +24,13 @@
 
 ## Script 游戏脚本
 - 通过装饰器 `@enableScript` 使一个类产生的所有实例都获得一个脚本管理节点 `ScriptManager`。
+
+## Stage 游戏舞台
+由于我们的画布默认占满屏幕，我们需要通过游戏舞台的相对位置来实现**相对布局**与**屏幕适配**
+
+游戏舞台是实现屏幕适配的核心。
+
+一般我们在设计游戏界面时，会有以下基本属性：
+- 设计宽度 `dw`
+- 设计高度 `dh`
+
