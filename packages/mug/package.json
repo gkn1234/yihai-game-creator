@@ -1,5 +1,5 @@
 {
-  "name": "@yhgame/playground-fe",
+  "name": "@yhgame/mug",
   "version": "0.0.0",
   "author": "Guo Kainan",
   "license": "MIT",
@@ -10,6 +10,8 @@
     "play": "vite"
   },
   "dependencies": {
+    "@yhgame/core": "^0.0.0",
+    "@yhgame/modules": "^0.0.0",
     "pixi.js": "^6.1.2"
   }
 }

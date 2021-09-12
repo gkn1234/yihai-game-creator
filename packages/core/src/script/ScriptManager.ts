@@ -2,7 +2,7 @@
  * @Autor: Guo Kainan
  * @Date: 2021-09-05 23:42:14
  * @LastEditors: Guo Kainan
- * @LastEditTime: 2021-09-08 14:46:24
+ * @LastEditTime: 2021-09-10 10:32:54
  * @Description: 脚本管理器
  */
 import { Script } from './Script'
@@ -78,8 +78,8 @@ export class ScriptManager {
     if (this._lifecycles.has(lifecycleName)) {
       // 执行某个生命周期下的所有脚本方法
       this._scripts.forEach((script: Script) => {
-        if (script.enabled && typeof script[lifecycleName] === 'function') {
-          script[lifecycleName](...args)
+        if (script.enabled && typeof (script as any)[lifecycleName] === 'function') {
+          (script as any)[lifecycleName](...args)
         }
       })
     }

@@ -2,7 +2,7 @@
  * @Autor: Guo Kainan
  * @Date: 2021-09-05 15:18:23
  * @LastEditors: Guo Kainan
- * @LastEditTime: 2021-09-08 16:22:52
+ * @LastEditTime: 2021-09-10 10:26:48
  * @Description: 脚本对象基类
  */
 import { game, Game } from '../Game'
@@ -19,6 +19,8 @@ export class Script {
 
   /** 扩充的脚本生命周期 */
   $lifecycles!: Set<string>
+  /** 指定脚本继承哪些模块的能力 */
+  $extendModules!: Set<string | Function>
   /** 配合Game装饰器，对游戏实例的引用 */
   Game!: Game
 
@@ -30,8 +32,6 @@ export class Script {
   /** 脚本是否激活，初始激活 */
   enabled: boolean
   
-  /** 其他属性，用于记录各种必要的属性以及生命周期方法 */
-  [key: string]: any
 
   constructor (...args: any[]) {
     this.enabled = true
@@ -41,8 +41,12 @@ export class Script {
 
   /** 初始化脚本，挂载到游戏模块上，以继承基础功能 */
   private _init () {
+    const extendModules = this.$extendModules
     this.Game.traveModules((module: GameModule) => {
-      module.$mountScript(this)
+      // 满足条件才会进行挂载
+      if (extendModules.has(module.name as string) || extendModules.has(module.constructor)) {
+        module.$mountScript(this)
+      }
     })
   }
 

@@ -2,16 +2,20 @@
  * @Autor: Guo Kainan
  * @Date: 2021-09-08 13:46:57
  * @LastEditors: Guo Kainan
- * @LastEditTime: 2021-09-09 16:18:20
+ * @LastEditTime: 2021-09-12 17:59:44
  * @Description: 屏幕适配模块
  */
-import { GameModule } from '@yhgame/core'
+import { 
+  GameModule, 
+  RelativeContainer,
+  lifecycle
+} from '@yhgame/core'
 import { Renderer, AbstractRenderer } from 'pixi.js'
 
 /** 屏幕适配参数 */
 export type ScreenStretch = 'none' | 'exactfit' | 'horizontal' | 'vertical'
 export type ScreenDirection = 'none' | 'horizontal' | 'vertical'
-export type ScreenAlign = 'center' | 'left' | 'right'
+export type ScreenAlign = 'center' | 'start' | 'end'
 /** 屏幕适配设置接口 */
 export interface ScreenFixOption {
   stretch: ScreenStretch,
@@ -20,10 +24,14 @@ export interface ScreenFixOption {
   alignY: ScreenAlign
 }
 
+@lifecycle('onScreenResize', '屏幕尺寸发生改变时触发')
 export class ScreenFix extends GameModule {
+  /** 画布 */
   private _renderer: Renderer | AbstractRenderer
-
+  /** 配置项 */
   private _options: ScreenFixOption
+  /** 相对布局容器 */
+  private _relativeContainers: Set<RelativeContainer> = new Set()
 
   /** 屏幕宽 */
   get screenWidth (): number { return self.innerWidth }
@@ -33,7 +41,7 @@ export class ScreenFix extends GameModule {
   /** 屏幕宽度是否更长 */
   get isWidthLonger (): boolean { return this.screenWidth >= this.screenHeight }
   /** 是否需要旋转舞台，在horizontal模式下，屏幕宽小于高，或者在vertical模式下，屏幕高小于宽 */
-  get shoudRotateStage (): boolean {
+  get shouldRotateStage (): boolean {
     return (this._options.direction === 'horizontal' && !this.isWidthLonger) ||
       (this._options.direction === 'vertical' && this.isWidthLonger)
   }
@@ -121,13 +129,14 @@ export class ScreenFix extends GameModule {
     let scaleX = 1, scaleY = 1
 
     // 先处理旋转以及旋转后的平移
-    if (this.shoudRotateStage) {
-      rotation = Math.PI / 2
+    if (this.shouldRotateStage) {
       if (direction === 'horizontal') {
+        rotation = Math.PI / 2
         posX += this.canvasHeight
       }
       else if (direction === 'vertical') {
-        posY += this.canvasHeight
+        rotation = -Math.PI / 2
+        posY += this.canvasWidth
       }
     }
 
@@ -148,11 +157,11 @@ export class ScreenFix extends GameModule {
     // 最后平移完成排版
     let dHor = 0, dVer = 0
     if (alignX === 'center') { dHor = (this.canvasWidth - this.stageWidth * scaleX) / 2 }
-    else if (alignX === 'right') { dHor = this.canvasWidth - this.stageWidth * scaleX }
+    else if (alignX === 'end') { dHor = this.canvasWidth - this.stageWidth * scaleX }
     if (alignY === 'center') { dVer = (this.canvasHeight - this.stageHeight * scaleY) / 2   }
-    else if (alignY === 'right') { dVer = this.canvasHeight - this.stageHeight * scaleY }
-    posX += (this.shoudRotateStage ? dVer : dHor)
-    posY += (this.shoudRotateStage ? dHor : dVer)
+    else if (alignY === 'end') { dVer = this.canvasHeight - this.stageHeight * scaleY }
+    posX += (this.shouldRotateStage ? dVer : dHor)
+    posY += (this.shouldRotateStage ? dHor : dVer)
 
     console.log(this.stageWidth, this.stageHeight, this.canvasWidth, this.canvasHeight)
     console.log(stretch, direction, alignX, alignY)
@@ -165,6 +174,17 @@ export class ScreenFix extends GameModule {
 
   // 调整相对容器的位置
   private _renderRelativeContainers () {
-
+    this._relativeContainers.forEach((container: RelativeContainer) => {
+      container.updatePosition()
+    })
+  }
+  /** 添加相对容器 */
+  addRelativeContainer (container: RelativeContainer) {
+    this._relativeContainers.add(container)
+    container.updatePosition()
+  }
+  /** 删除相对容器 */
+  removeRelativeContainer (container: RelativeContainer) {
+    this._relativeContainers.delete(container)
   }
 }

@@ -2,18 +2,18 @@
  * @Autor: Guo Kainan
  * @Date: 2021-09-05 15:18:51
  * @LastEditors: Guo Kainan
- * @LastEditTime: 2021-09-09 15:59:30
+ * @LastEditTime: 2021-09-12 17:04:40
  * @Description: 游戏实例
  */
 import { 
   Application,
   AbstractRenderer,
   Renderer,
-  Container,
   Ticker,
   Loader
 } from 'pixi.js'
 
+import { Container } from './node/pixiNodeExtend'
 import { GameModule } from './GameModule'
 
 /** 游戏配置项 */
@@ -23,12 +23,6 @@ export interface GameOptions {
   /** 游戏的设计高度(舞台高度、场景高度) */
   height?: number
 }
-
-/** 游戏模块暂存数据 */
-export type GameModulesData = Map<string, {
-  args: any[]
-  Module: typeof GameModule
-}>
 
 /** 给指定类注入游戏实例的装饰器 */
 export function game (Constructor: Function) {
@@ -55,7 +49,7 @@ export class Game {
   /** 单例引用 */
   static __GameInstance__: Game | null = null
   /** 暂存游戏模块参数 */
-  static _modules: GameModulesData = new Map()
+  static _modules: Map<typeof GameModule, any[]> = new Map()
 
   /** PixiJS App实例 */
   private _app!: Application
@@ -90,18 +84,18 @@ export class Game {
 
   /**
    * 注册游戏的控制模块
-   * @param name 模块名称
-   * @param model 游戏控制模块的构造函数
+   * @param Module 游戏控制模块的构造函数，构造函数名即为模块名，不允许重复
    * @param args 
    */
-  static registerModule (
-    name: string,
-    Module: typeof GameModule,
+  static registerModule<T extends typeof GameModule> (
+    Module: T,
     ...args: any[]
   ) {
-    Game._modules.set(name, {
-      Module, args
-    })
+    if (Game._modules.get(Module)) {
+      throw new Error(`Duplicated module found: ${Module.name}.`)
+    }
+
+    Game._modules.set(Module, args)
   }
 
   get App (): Application {
@@ -126,8 +120,8 @@ export class Game {
 
   /** 初始化各种游戏控制模块 */
   private _initModules () {
-    Game._modules.forEach((value, name: string) => {
-      const { Module, args } = value
+    Game._modules.forEach((args: any[], Module: typeof GameModule) => {
+      const name = Module.name
       const module = new Module(...args)
       this._modules.set(name, module)
     })
@@ -147,9 +141,12 @@ export class Game {
     this.traveModules(module => module.onMounted())
   }
 
-  /** 获取模块 */
-  module (name: string): GameModule | undefined {
-    return this._modules.get(name)
+  /** 获取模块，可以用名称或者构造函数获取 */
+  module <T extends typeof GameModule>(key: string | T): InstanceType<T> | GameModule | undefined {
+    if (typeof key === 'string') {
+      return this._modules.get(key)
+    }
+    return this._modules.get(key.name)
   }
 
   /** 遍历所有模块 */

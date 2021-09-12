@@ -2,7 +2,7 @@
  * @Autor: Guo Kainan
  * @Date: 2021-09-05 19:27:16
  * @LastEditors: Guo Kainan
- * @LastEditTime: 2021-09-09 15:58:44
+ * @LastEditTime: 2021-09-12 17:55:19
  * @Description: 游戏功能模块
  */
 import { Game, game } from './Game'
@@ -16,9 +16,9 @@ import { enableScript, Scriptable } from './script/enableScript'
  * @param Constructor 
  * @param args 初始化参数
  */
-export function module (name: string, Module: typeof GameModule, ...args: any[]) {
+export function module<T extends typeof GameModule> (Module: T, ...args: any[]) {
   return function (Constructor: typeof Game) {
-    Constructor.registerModule(name, Module, ...args)
+    Constructor.registerModule(Module, ...args)
   }
 }
 
@@ -39,6 +39,10 @@ export class GameModule implements Scriptable {
   $destroyScript!: () => void
   
   constructor (...args: any[]) {}
+
+  get name (): string | undefined {
+    return this.constructor.name
+  }
 
   /** 模块挂载前触发 */
   onBeforeMount () {}

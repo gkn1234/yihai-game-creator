@@ -2,7 +2,7 @@
  * @Autor: Guo Kainan
  * @Date: 2021-09-06 14:52:57
  * @LastEditors: Guo Kainan
- * @LastEditTime: 2021-09-08 14:11:09
+ * @LastEditTime: 2021-09-10 10:26:38
  * @Description: 
  */
 import { Script } from './Script'
@@ -17,11 +17,9 @@ export interface Scriptable {
   /** 根据构造函数或者脚本对象，挂载对应的脚本 */
   $mountScript: (script: typeof Script | Script, ...args: any[]) => void
   /** 触发一个生命周期 */
-  $trigger: (name: string) => void
+  $trigger: (name: string, ...args: any[]) => void
   /** 销毁脚本(所有)，一般用于对象注销 */
   $destroyScript: () => void
-  /** 可以挂载其他属性 */
-  [key: string]: any
 }
 
 /** 对指定节点类扩展脚本功能的装饰器 */
@@ -67,10 +65,8 @@ export function enableScript (Constructor: Function) {
   Object.assign(Constructor.prototype, scriptMixin)
 }
 
-/** 生命周期保留名称 */
-const RESERVED_LIFECYCLE_NAMES: string[] = ['onActive', 'onDestroy']
 /**
- * 注入脚本生命周期的装饰器
+ * 注入脚本或模块的生命周期的装饰器
  * @param name 生命周期名称，必须以 on 开头
  * @param desc 描述
  */
@@ -81,15 +77,23 @@ export function lifecycle (name: string = '', desc: string = '') {
       console.error(`Invalid lifecycle name: ${name}! Lifecycle name must begin with \'on\'.`)
       return
     }
-    if (RESERVED_LIFECYCLE_NAMES.indexOf(name) >= 0) {
-      // 不可以使用保留名称
-      console.error(`Invalid lifecycle name: ${name}! It is a reversed lifecycle name.`)
-      return
-    }
-
+    
     if (!Constructor.prototype.$lifecycles) {
       Constructor.prototype.$lifecycles = new Set()
     }
     Constructor.prototype.$lifecycles.add(name)
+  }
+}
+
+/**
+ * 指定脚本继承哪个模块的基本属性
+ * @param module 
+ */
+export function extendModules(module: Function | string) {
+  return function (Constructor: Function) {
+    if (!Constructor.prototype.$extendModules) {
+      Constructor.prototype.$extendModules = new Set()
+    }
+    Constructor.prototype.$extendModules.add(module)
   }
 }
