@@ -2,7 +2,7 @@
  * @Autor: Guo Kainan
  * @Date: 2021-09-06 14:52:57
  * @LastEditors: Guo Kainan
- * @LastEditTime: 2021-09-10 10:26:38
+ * @LastEditTime: 2021-09-13 17:15:13
  * @Description: 
  */
 import { Script } from './Script'
@@ -15,7 +15,7 @@ export interface Scriptable {
   /** 本类的所有脚本生命周期 */
   $lifecycles?: Set<string>
   /** 根据构造函数或者脚本对象，挂载对应的脚本 */
-  $mountScript: (script: typeof Script | Script, ...args: any[]) => void
+  $mountScript: (script: typeof Script | Script, ...args: any[]) => Script
   /** 触发一个生命周期 */
   $trigger: (name: string, ...args: any[]) => void
   /** 销毁脚本(所有)，一般用于对象注销 */
@@ -30,7 +30,7 @@ export function enableScript (Constructor: Function) {
     $mountScript (
       script: typeof Script | Script,
       ...args: any[]
-    ) {
+    ): Script {
       // 确保脚本管理对象初始化
       if (!this.$scripts) {
         this.$scripts = new ScriptManager(this)
@@ -39,17 +39,18 @@ export function enableScript (Constructor: Function) {
       if (script instanceof Script) {
         // 挂载一个脚本对象
         this.$scripts.mount(script)
+        return script
       }
-      else {
-        // 根据构造函数挂载脚本
-        const scriptInstance = new script(...args)
-        this.$scripts.mount(scriptInstance)       
-      }
+
+      // 根据构造函数挂载脚本
+      const scriptInstance = new script(...args)
+      this.$scripts.mount(scriptInstance)       
+      return scriptInstance
     },
 
-    $trigger (name: string) {
+    $trigger (name: string, ...args: any[]) {
       if (this.$scripts) {
-        this.$scripts.trigger(name)
+        this.$scripts.trigger(name, ...args)
       }
     },
 
@@ -86,14 +87,25 @@ export function lifecycle (name: string = '', desc: string = '') {
 }
 
 /**
- * 指定脚本继承哪个模块的基本属性
- * @param module 
+ * 指定脚本继承哪个模块的生命周期
+ * @param module 可以用模块构造函数或者其名称指定其继承哪个模块。不填则继承所有模块
  */
-export function extendModules(module: Function | string) {
+export function extendModules (module: Function | string | boolean = true) {
   return function (Constructor: Function) {
-    if (!Constructor.prototype.$extendModules) {
+    // true 代表继承所有模块
+    if (module === true) {
+      Constructor.prototype.$extendModules = true
+      return
+    }
+
+    if (!!Constructor.prototype.$extendModules) {
       Constructor.prototype.$extendModules = new Set()
     }
     Constructor.prototype.$extendModules.add(module)
   }
+}
+
+/** 脚本不继承任何模块的生命周期 */
+export function excludeModules (Constructor: Function) {
+  Constructor.prototype.$extendModules = null
 }

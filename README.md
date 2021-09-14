@@ -2,7 +2,7 @@
  * @Autor: Guo Kainan
  * @Date: 2021-09-05 13:43:37
  * @LastEditors: Guo Kainan
- * @LastEditTime: 2021-09-08 14:16:02
+ * @LastEditTime: 2021-09-13 18:22:54
  * @Description: 
 -->
 # Yihai-Game-Creator
@@ -10,7 +10,7 @@
 
 目前正在开发阶段，仅供自用。
 
-**用于学习探索 PIXIJS/WEBGL/JEST/VITE/前端工程化，希望能够坚持下去，永不弃坑，直到它成熟。**
+**用于学习探索 PIXIJS/WEBGL/JEST/VITE/前端工程化，希望能够坚持下去，有生之年完成。**
 
 ## 引擎模块介绍
 | 模块 | 描述 |

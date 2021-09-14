@@ -2,23 +2,23 @@
  * @Autor: Guo Kainan
  * @Date: 2021-09-09 18:46:27
  * @LastEditors: Guo Kainan
- * @LastEditTime: 2021-09-12 18:18:08
+ * @LastEditTime: 2021-09-13 16:22:11
  * @Description: 相对布局节点
  */
 import { Container } from './pixiNodeExtend'
 import { GameModule } from '../GameModule'
 
 export interface RelativePosition {
-  top?: number,
-  bottom?: number,
-  left?: number,
-  right?: number,
-  centerX?: number,
-  centerY?: number
+  top?: number | string,
+  bottom?: number | string,
+  left?: number | string,
+  right?: number | string,
+  centerX?: number | string,
+  centerY?: number | string
 }
 
 /** 描述屏幕适配模块的功能，避免和 modules 包的循环依赖问题，详见 @yhgame/modules/ScreenFix 中的具体实现 */
-interface ScreenFix extends GameModule {
+export interface ScreenFix extends GameModule {
   canvasWidth: number
   canvasHeight: number
   shouldRotateStage: boolean
@@ -26,39 +26,14 @@ interface ScreenFix extends GameModule {
   removeRelativeContainer (container: RelativeContainer): void
 }
 
-/** 解析相对布局信息 */
-function _resolveRelativePos (pos: RelativePosition): RelativePosition {
-  let res: RelativePosition = {}
-  if (typeof pos.top !== 'undefined') {
-    res.top = pos.top
-  }
-  else if (typeof pos.bottom !== 'undefined') {
-    res.bottom = pos.bottom
-  }
-  else if (typeof pos.centerY !== 'undefined') {
-    res.centerY = pos.centerY
-  }
-  else {
-    res.top = 0
-  }
-
-  if (typeof pos.left !== 'undefined') {
-    res.left = pos.left
-  }
-  else if (typeof pos.right !== 'undefined') {
-    res.right = pos.right
-  }
-  else if (typeof pos.centerX !== 'undefined') {
-    res.centerX = pos.centerX
-  }
-  else {
-    res.left = 0
-  }
-  return res
+/** 水平竖直方向 */
+enum Direction {
+  horizontal = 1,
+  vertical = 2
 }
 
 export class RelativeContainer extends Container {
-  private _pos: RelativePosition = { centerX: 0, centerY: 0 }
+  private _pos: RelativePosition
 
   /**
    * 相对布局节点的作用是时容器相对于画布布局
@@ -66,6 +41,7 @@ export class RelativeContainer extends Container {
    */
   constructor () {
     super()
+    this._pos = this._resolveRelativePos()
   }
 
   /** 相对布局组件强依赖与屏幕适配模块 */
@@ -77,15 +53,61 @@ export class RelativeContainer extends Container {
     return module as ScreenFix
   }
 
+  /** 计算相对布局偏移量，支持百分比转数字尺寸 */
+  private _calcRelative (num: number | string, direction: Direction = Direction.horizontal): number {
+    const number = Number(num)
+    if (typeof number === 'number' && !Number.isNaN(number)) {
+      return number
+    }
+    else if (typeof num === 'string' && num[num.length - 1] === '%') {
+      const percent = Number(num.slice(0, num.length - 1))
+      const base = direction === Direction.horizontal ? this.screenFix.canvasWidth : this.screenFix.canvasHeight
+      return base * percent / 100
+    }
+    return number
+  }
+
+  /** 解析相对布局信息 */
+  private _resolveRelativePos (pos?: RelativePosition): RelativePosition {
+    pos = pos || {}
+    let res: RelativePosition = {}
+    if (!!pos.top) {
+      res.top = pos.top
+    }
+    else if (!!pos.bottom) {
+      res.bottom = pos.bottom
+    }
+    else if (!!pos.centerY) {
+      res.centerY = pos.centerY
+    }
+    else {
+      res.centerY = 0
+    }
+  
+    if (!!pos.left) {
+      res.left = pos.left
+    }
+    else if (!!pos.right) {
+      res.right = pos.right
+    }
+    else if (!!pos.centerX) {
+      res.centerX = pos.centerX
+    }
+    else {
+      res.centerX = 0
+    }
+    return res
+  }
+
   /**
-   * 设定相对布局信息，相对于画布边界的定位
+   * 设定相对布局信息，相对于画布边界的定位，与anchor锚点无关
    * @param pos 相对布局信息，详细说明如下：
    * 不能同时指定 top & bottom & centerY 或者 left & right & centerX，水平和竖直边界定位只能各选其一。
    * 竖直方向的优先级：top -> bottom -> centerY
    * 水平方向的优先级：left -> right -> centerX
    */
   setRelative (pos: RelativePosition) {
-    this._pos = _resolveRelativePos(pos)
+    this._pos = this._resolveRelativePos(pos)
     this.updatePosition()
   }
 
@@ -93,14 +115,16 @@ export class RelativeContainer extends Container {
   updatePosition () {
     const parent = this.parent
     if (!parent) {
-      // 父节点不存在，无法进行相对布局
+      // 没有父节点，相对位置无从计算
       return
     }
-    
-    const { top, bottom, left, right, centerX, centerY } = this._pos
+
+    // TS 编译无法识别我的判别函数，所以只能这么写
+    let { top, bottom, left, right, centerX, centerY } = this._pos
     const { canvasWidth, canvasHeight, shouldRotateStage } = this.screenFix
     let globalX = 0, globalY = 0
-    if (typeof top !== 'undefined') {
+    if (!!top) {
+      top = this._calcRelative(top, Direction.vertical)
       if (shouldRotateStage) {
         globalX = canvasHeight - top
       }
@@ -108,7 +132,8 @@ export class RelativeContainer extends Container {
         globalY = top
       }
     }
-    else if (typeof bottom !== 'undefined') {
+    else if (!!bottom) {
+      bottom = this._calcRelative(bottom, Direction.vertical)
       if (shouldRotateStage) {
         globalX = bottom
       }
@@ -116,7 +141,8 @@ export class RelativeContainer extends Container {
         globalY = canvasHeight - bottom
       }
     }
-    else if (typeof centerY !== 'undefined') {
+    else if (centerY) {
+      centerY = this._calcRelative(centerY, Direction.vertical)
       if (shouldRotateStage) {
         globalX = (canvasHeight / 2) - centerY
       }
@@ -125,7 +151,8 @@ export class RelativeContainer extends Container {
       }
     }
 
-    if (typeof left !== 'undefined') {
+    if (!!left) {
+      left = this._calcRelative(left, Direction.horizontal)
       if (shouldRotateStage) {
         globalY = left
       }
@@ -133,7 +160,8 @@ export class RelativeContainer extends Container {
         globalX = left
       }
     }
-    else if (typeof right !== 'undefined') {
+    else if (!!right) {
+      right = this._calcRelative(right, Direction.horizontal)
       if (shouldRotateStage) {
         globalY = canvasWidth - right
       }
@@ -141,7 +169,8 @@ export class RelativeContainer extends Container {
         globalX = canvasWidth - right
       }
     }
-    else if (typeof centerX !== 'undefined') {
+    else if (!!centerX) {
+      centerX = this._calcRelative(centerX, Direction.horizontal)
       if (shouldRotateStage) {
         globalY = (canvasWidth / 2) + centerX
       }
@@ -153,13 +182,16 @@ export class RelativeContainer extends Container {
     const point = parent.toLocal({
       x: globalX, y: globalY
     })
+
     // console.log(globalX, globalY,  point.x, point.y)
+
     this.position.set(point.x, point.y)
   }
 
   onAdded () {
     super.onAdded()
     this.screenFix.addRelativeContainer(this)
+    this.updatePosition()
   }
 
   onRemoved () {

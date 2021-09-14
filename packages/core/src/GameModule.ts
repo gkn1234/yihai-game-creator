@@ -2,7 +2,7 @@
  * @Autor: Guo Kainan
  * @Date: 2021-09-05 19:27:16
  * @LastEditors: Guo Kainan
- * @LastEditTime: 2021-09-12 17:55:19
+ * @LastEditTime: 2021-09-13 17:20:52
  * @Description: 游戏功能模块
  */
 import { Game, game } from './Game'
@@ -24,7 +24,7 @@ export function module<T extends typeof GameModule> (Module: T, ...args: any[]) 
 
 @game
 @enableScript
-export class GameModule implements Scriptable {
+export class GameModule extends Script implements Scriptable {
   /** 对游戏实例的引用 */
   Game!: Game
   /** 指向脚本管理对象 */
@@ -32,15 +32,17 @@ export class GameModule implements Scriptable {
   /** 本类的所有脚本生命周期 */
   $lifecycles?: Set<string>
   /** 挂载一个脚本 */
-  $mountScript!: (script: typeof Script | Script, ...args: any[]) => void
+  $mountScript!: (script: typeof Script | Script, ...args: any[]) => Script
   /** 触发一个生命周期 */
-  $trigger!: (name: string) => void
+  $trigger!: (name: string, ...args: any[]) => void
   /** 销毁脚本(所有)，一般用于对象注销 */
   $destroyScript!: () => void
   
-  constructor (...args: any[]) {}
+  constructor (...args: any[]) {
+    super()
+  }
 
-  get name (): string | undefined {
+  get name (): string {
     return this.constructor.name
   }
 
@@ -52,4 +54,31 @@ export class GameModule implements Scriptable {
 
   /** 游戏开始 */
   onGameStart () {}
+
+  /** 脚本初始化时，该脚本是否要继承本基础模块的能力，定义模块的默认行为 */
+  onScriptInit (script: Script) {
+    if (this.shouldMountScript(script)) {
+      this.$mountScript(script)
+    }
+  }
+
+  /** 判断是否需要挂载脚本 */
+  shouldMountScript (script: Script): boolean {
+    if (script instanceof GameModule) {
+      // 模块本质是挂载Game实例上的脚本，加以区分，不要重复挂载
+      return false
+    }
+
+    const extendModules = script.$extendModules
+    if (extendModules === true) {
+      // 为true时，任意模块都会挂载
+      return true
+    }
+    else if (!extendModules) {
+      // 未指定时，或为false时，任意模块都不会挂载
+      return false
+    }
+    // 指定模块挂载
+    return extendModules.has(this.name) || extendModules.has(this.constructor)
+  }
 }

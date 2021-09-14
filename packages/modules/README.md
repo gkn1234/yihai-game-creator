@@ -2,10 +2,13 @@
  * @Autor: Guo Kainan
  * @Date: 2021-09-08 14:41:13
  * @LastEditors: Guo Kainan
- * @LastEditTime: 2021-09-08 15:33:01
+ * @LastEditTime: 2021-09-13 16:54:19
  * @Description: 
 -->
 # 模块
+
+# GameTick 游戏时间片模块
+
 
 # ScreenResize 屏幕适配模块
 

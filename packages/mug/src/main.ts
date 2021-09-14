@@ -2,7 +2,7 @@
  * @Autor: Guo Kainan
  * @Date: 2021-09-08 15:19:29
  * @LastEditors: Guo Kainan
- * @LastEditTime: 2021-09-12 18:16:29
+ * @LastEditTime: 2021-09-13 15:28:02
  * @Description: 
  */
 import { Game, GameOptions, Container, Sprite, module, RelativeContainer } from '@yhgame/core'
@@ -13,16 +13,13 @@ import { Texture } from 'pixi.js'
 class MyGame extends Game {
   constructor () {
     super({
-      width: 800,
-      height: 600
+      width: 1280,
+      height: 720
     })
 
     const b = new Sprite(Texture.WHITE)
-    b.on('added', () => {
-      console.log('added!')
-    })
-    b.width = 800
-    b.height = 600
+    b.width = 1280
+    b.height = 720
     this.Stage.addChild(b)
     const s = new Sprite(Texture.WHITE)
     s.tint = 0xff0000
@@ -46,10 +43,9 @@ class MyGame extends Game {
     rs.height = 100
     rs.tint = 0x00ff00
     r.addChild(rs)
-    
     r.setRelative({
-      top: 10,
-      left: 10
+      top: '10%',
+      left: '10%'
     })
     
 

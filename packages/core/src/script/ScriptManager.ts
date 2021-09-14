@@ -2,20 +2,19 @@
  * @Autor: Guo Kainan
  * @Date: 2021-09-05 23:42:14
  * @LastEditors: Guo Kainan
- * @LastEditTime: 2021-09-10 10:32:54
+ * @LastEditTime: 2021-09-13 15:08:01
  * @Description: 脚本管理器
  */
 import { Script } from './Script'
 import { Scriptable } from './enableScript'
 import { GameModule } from '../GameModule'
 
-/** 管理器类型 */
-enum ScriptManagerType {
-  /** 游戏模块对应的脚本管理器，为脚本拓展系统方法，但不可主动销毁脚本 */
-  module = 0,
-  /** 节点对应的脚本管理器，可以销毁脚本 */
-  node = 1
-}
+/**
+ * 管理器类型
+ * - module 游戏模块对应的脚本管理器，为脚本拓展系统方法，但不可主动销毁脚本
+ * - node 节点对应的脚本管理器，可以销毁脚本
+ */
+type ScriptManagerType = 'module' | 'node'
 
 export class ScriptManager {
   /** 应用此脚本管理器的对象 */
@@ -35,9 +34,7 @@ export class ScriptManager {
   constructor (sourceTarget: Scriptable) {
     this._sourceTarget = sourceTarget
 
-    this.type = this._sourceTarget instanceof GameModule ? 
-      ScriptManagerType.module : 
-      ScriptManagerType.node
+    this.type = this._sourceTarget instanceof GameModule ? 'module' : 'node'
     
     this._scripts = new Set()
 
@@ -48,7 +45,7 @@ export class ScriptManager {
 
   /** 是否为节点下的脚本控制器 */
   get isNodeSource (): boolean {
-    return this.type === ScriptManagerType.node
+    return this.type === 'node'
   }
 
   /**
@@ -83,20 +80,25 @@ export class ScriptManager {
         }
       })
     }
+    else {
+      console.error(`You have trigger a non-existent lifecycle: ${lifecycleName}!`)
+    }
   }
 
   /** 挂载某个脚本  */
   mount (script: Script) {
-    script.mount(this)
+    script.mountFrom(this)
     this._scripts.add(script)
     /** 从原型链上寻到脚本的生命周期，进行扩充，注意$lifecycles在脚本类的原型链上，这里都是any引用 */
-    this.registerBySet(script.$lifecycles)
+    if (script.$lifecycles) {
+      this.registerBySet(script.$lifecycles)
+    }
   }
 
   /** 卸载某个脚本 */
   unmount (script: Script) {
     this._scripts.delete(script)
-    script.unmount(this)
+    script.unmountFrom(this)
   }
 
   /** 销毁脚本功能 */

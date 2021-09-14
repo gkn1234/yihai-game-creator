@@ -2,13 +2,14 @@
  * @Autor: Guo Kainan
  * @Date: 2021-09-08 13:46:57
  * @LastEditors: Guo Kainan
- * @LastEditTime: 2021-09-12 17:59:44
+ * @LastEditTime: 2021-09-13 16:22:25
  * @Description: 屏幕适配模块
  */
 import { 
   GameModule, 
   RelativeContainer,
-  lifecycle
+  lifecycle,
+  ScreenFix as IScreenFix
 } from '@yhgame/core'
 import { Renderer, AbstractRenderer } from 'pixi.js'
 
@@ -24,8 +25,12 @@ export interface ScreenFixOption {
   alignY: ScreenAlign
 }
 
-@lifecycle('onScreenResize', '屏幕尺寸发生改变时触发')
-export class ScreenFix extends GameModule {
+export enum ScreenFixLifecycle {
+  onScreenResize = 'onScreenResize'
+}
+
+@lifecycle(ScreenFixLifecycle.onScreenResize, '屏幕尺寸发生改变时触发')
+export class ScreenFix extends GameModule implements IScreenFix {
   /** 画布 */
   private _renderer: Renderer | AbstractRenderer
   /** 配置项 */
@@ -119,6 +124,10 @@ export class ScreenFix extends GameModule {
     console.log('resize')
     this._resizeStage()
     this._renderRelativeContainers()
+
+    // 向上向下都触发事件
+    this.$trigger(ScreenFixLifecycle.onScreenResize)
+    this.Game.$trigger(ScreenFixLifecycle.onScreenResize)
   }
 
   // 调整舞台位置
@@ -163,9 +172,12 @@ export class ScreenFix extends GameModule {
     posX += (this.shouldRotateStage ? dVer : dHor)
     posY += (this.shouldRotateStage ? dHor : dVer)
 
-    console.log(this.stageWidth, this.stageHeight, this.canvasWidth, this.canvasHeight)
+    /*
     console.log(stretch, direction, alignX, alignY)
+    console.log(this.stageWidth, this.stageHeight, this.canvasWidth, this.canvasHeight)
     console.log(posX, posY, scaleX, scaleY, rotation)
+    */
+   
     const stage = this.Game.Stage
     stage.position.set(posX, posY)
     stage.rotation = rotation
@@ -181,7 +193,6 @@ export class ScreenFix extends GameModule {
   /** 添加相对容器 */
   addRelativeContainer (container: RelativeContainer) {
     this._relativeContainers.add(container)
-    container.updatePosition()
   }
   /** 删除相对容器 */
   removeRelativeContainer (container: RelativeContainer) {

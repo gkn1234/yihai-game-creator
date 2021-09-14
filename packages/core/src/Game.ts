@@ -2,7 +2,7 @@
  * @Autor: Guo Kainan
  * @Date: 2021-09-05 15:18:51
  * @LastEditors: Guo Kainan
- * @LastEditTime: 2021-09-12 17:04:40
+ * @LastEditTime: 2021-09-13 14:50:31
  * @Description: 游戏实例
  */
 import { 
@@ -13,6 +13,9 @@ import {
   Loader
 } from 'pixi.js'
 
+import { Script } from './script/Script'
+import { ScriptManager } from './script/ScriptManager'
+import { Scriptable, enableScript, lifecycle } from './script/enableScript'
 import { Container } from './node/pixiNodeExtend'
 import { GameModule } from './GameModule'
 
@@ -45,7 +48,19 @@ function _resolveGameOptions (options?: GameOptions): Required<GameOptions> {
   }
 }
 
-export class Game {
+export enum GameLifecycle {
+  onModuleBeforeMount = 'onModuleBeforeMount',
+  onModuleMounted = 'onModuleMounted',
+  onGameStart = 'onGameStart',
+  onScriptInit = 'onScriptInit'
+}
+
+@enableScript
+@lifecycle(GameLifecycle.onModuleBeforeMount, '模块挂载前')
+@lifecycle(GameLifecycle.onModuleMounted, '模块挂载后')
+@lifecycle(GameLifecycle.onGameStart, '游戏开始')
+@lifecycle(GameLifecycle.onScriptInit, '游戏中有脚本完成了初始化')
+export class Game implements Scriptable {
   /** 单例引用 */
   static __GameInstance__: Game | null = null
   /** 暂存游戏模块参数 */
@@ -53,10 +68,22 @@ export class Game {
 
   /** PixiJS App实例 */
   private _app!: Application
-  /** 各种游戏模块 */
+  /** 各种游戏模块的索引 */
   private _modules: Map<string, GameModule> = new Map()
   /** 配置项 */
   readonly options!: Required<GameOptions>
+
+  /** Game具有脚本管理能力 */
+  /** 指向脚本管理对象 */
+  $scripts!: ScriptManager | null
+  /** 本类的所有脚本生命周期 */
+  $lifecycles?: Set<string>
+  /** 挂载一个脚本 */
+  $mountScript!: (script: typeof Script | Script, ...args: any[]) => Script
+  /** 触发一个生命周期 */
+  $trigger!: (name: string, ...args: any[]) => void
+  /** 销毁脚本(所有)，一般用于对象注销 */
+  $destroyScript!: () => void
 
   constructor (options?: GameOptions) {
     if (Game.__GameInstance__) {
@@ -123,6 +150,7 @@ export class Game {
     Game._modules.forEach((args: any[], Module: typeof GameModule) => {
       const name = Module.name
       const module = new Module(...args)
+      this.$mountScript(module)
       this._modules.set(name, module)
     })
   }
@@ -132,13 +160,13 @@ export class Game {
    * @param container 挂载容器，H5环境下为body
    */
   mount (container?: HTMLElement) {
-    this.traveModules(module => module.onBeforeMount())
+    this.$trigger(GameLifecycle.onModuleBeforeMount)
 
     container = container || document.body
     container.innerHTML = ''
     container.appendChild(this.App.view)
 
-    this.traveModules(module => module.onMounted())
+    this.$trigger(GameLifecycle.onModuleMounted)
   }
 
   /** 获取模块，可以用名称或者构造函数获取 */
@@ -156,6 +184,6 @@ export class Game {
 
   /** 开始游戏 */
   start () {
-    this.traveModules(module => module.onGameStart())
+    this.$trigger(GameLifecycle.onGameStart)
   }
 }
