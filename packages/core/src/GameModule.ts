@@ -2,7 +2,7 @@
  * @Autor: Guo Kainan
  * @Date: 2021-09-05 19:27:16
  * @LastEditors: Guo Kainan
- * @LastEditTime: 2021-09-13 17:20:52
+ * @LastEditTime: 2021-09-14 17:18:26
  * @Description: 游戏功能模块
  */
 import { Game, game } from './Game'
@@ -62,7 +62,7 @@ export class GameModule extends Script implements Scriptable {
     }
   }
 
-  /** 判断是否需要挂载脚本 */
+  /** 判断是否需要挂载脚本，默认判定方式 */
   shouldMountScript (script: Script): boolean {
     if (script instanceof GameModule) {
       // 模块本质是挂载Game实例上的脚本，加以区分，不要重复挂载

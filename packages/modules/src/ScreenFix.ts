@@ -2,12 +2,13 @@
  * @Autor: Guo Kainan
  * @Date: 2021-09-08 13:46:57
  * @LastEditors: Guo Kainan
- * @LastEditTime: 2021-09-13 16:22:25
+ * @LastEditTime: 2021-09-14 17:26:08
  * @Description: 屏幕适配模块
  */
 import { 
   GameModule, 
   RelativeContainer,
+  Script,
   lifecycle,
   ScreenFix as IScreenFix
 } from '@yhgame/core'
@@ -25,6 +26,7 @@ export interface ScreenFixOption {
   alignY: ScreenAlign
 }
 
+/** 屏幕适配生命周期 */
 export enum ScreenFixLifecycle {
   onScreenResize = 'onScreenResize'
 }

@@ -2,7 +2,7 @@
  * @Autor: Guo Kainan
  * @Date: 2021-09-05 23:42:14
  * @LastEditors: Guo Kainan
- * @LastEditTime: 2021-09-13 15:08:01
+ * @LastEditTime: 2021-09-15 15:46:50
  * @Description: 脚本管理器
  */
 import { Script } from './Script'
@@ -29,14 +29,12 @@ export class ScriptManager {
   /** 本管理器对应的脚本生命周期 */
   private _lifecycles: Set<string> = new Set()
   /** 当前脚本队列 */
-  private _scripts: Set<Script>
+  private _scripts: Set<Script> = new Set()
 
   constructor (sourceTarget: Scriptable) {
     this._sourceTarget = sourceTarget
 
     this.type = this._sourceTarget instanceof GameModule ? 'module' : 'node'
-    
-    this._scripts = new Set()
 
     if (this._sourceTarget.$lifecycles) {
       this.registerBySet(this._sourceTarget.$lifecycles)
@@ -99,6 +97,19 @@ export class ScriptManager {
   unmount (script: Script) {
     this._scripts.delete(script)
     script.unmountFrom(this)
+  }
+
+  /** 寻找某个脚本 */
+  find<T extends typeof Script> (key: string | T): InstanceType<T> | Script | undefined {
+    const scripts = this._scripts
+    for (let script of scripts) {
+      if (typeof key === 'string' && script.constructor.name === key) {
+        return script
+      }
+      if (script.constructor === key) {
+        return script
+      }
+    }
   }
 
   /** 销毁脚本功能 */

@@ -2,7 +2,7 @@
  * @Autor: Guo Kainan
  * @Date: 2021-09-05 15:18:23
  * @LastEditors: Guo Kainan
- * @LastEditTime: 2021-09-14 16:28:02
+ * @LastEditTime: 2021-09-15 15:47:14
  * @Description: 脚本对象基类
  */
 import { game, Game, GameLifecycle } from '../Game'
@@ -73,10 +73,10 @@ export class Script {
       this._moduleManagers.forEach((moduleManager: ScriptManager) => {
         moduleManager.unmount(this)
       })
-      // 注意修改脚本对象的指针，以便可以正确释放内存
-      this._nodeManagers = null
       // 触发对应生命周期
       this.onDestroy()
+      // 注意修改脚本对象的指针，以便可以正确释放内存
+      this._nodeManagers = null
     }
     else {
       this._moduleManagers.delete(scriptManager)
@@ -92,8 +92,17 @@ export class Script {
     this.nodeInstance.$trigger(name, ...args)
   }
 
-  /** 脚本固有生命周期，挂载到管理节点时触发 */
+  /** 在节点上，根据指定的构造函数或者名称寻找其他脚本 */
+  getScript<T extends typeof Script> (key: string | T): InstanceType<T> | Script | undefined {
+    if (!this._nodeManagers) {
+      return
+    }
+
+    return this._nodeManagers.find(key)
+  }
+
+  /** 脚本固有生命周期，挂载到管理节点后触发 */
   onActive () {}
-  /** 脚本固有生命周期，被卸载后触发 */
+  /** 脚本固有生命周期，被管理节点卸载前触发 */
   onDestroy () {}
 }

@@ -2,7 +2,7 @@
  * @Autor: Guo Kainan
  * @Date: 2021-09-08 15:19:29
  * @LastEditors: Guo Kainan
- * @LastEditTime: 2021-09-13 15:28:02
+ * @LastEditTime: 2021-09-15 16:37:42
  * @Description: 
  */
 import { Game, GameOptions, Container, Sprite, module, RelativeContainer } from '@yhgame/core'
@@ -47,6 +47,8 @@ class MyGame extends Game {
       top: '10%',
       left: '10%'
     })
+
+    console.log(r.getLocalBounds())
     
 
 

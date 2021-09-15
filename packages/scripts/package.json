@@ -1,0 +1,32 @@
+{
+  "name": "@yhgame/scripts",
+  "version": "0.0.0",
+  "description": "Basic scripts for Yihai-Game-Creator.",
+  "author": "Guo Kainan",
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "test": "jest --coverage",
+    "build": "vite build"
+  },
+  "main": "./dist/yhgame-scripts.umd.js",
+  "module": "./dist/yhgame-scripts.es.js",
+  "types": "./dist/src/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "import": "./dist/yhgame-scripts.es.js",
+      "require": "./dist/yhgame-scripts.umd.js"
+    }
+  },
+  "dependencies": {
+    "@yhgame/core": "^0.0.0",
+    "@yhgame/modules": "^0.0.0",
+    "@yhgame/shared": "^0.0.0",
+    "pixi.js": "^6.1.2"
+  }
+}

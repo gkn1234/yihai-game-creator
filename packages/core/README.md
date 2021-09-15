@@ -2,7 +2,7 @@
  * @Autor: Guo Kainan
  * @Date: 2021-09-05 20:47:47
  * @LastEditors: Guo Kainan
- * @LastEditTime: 2021-09-14 16:29:19
+ * @LastEditTime: 2021-09-14 16:39:51
  * @Description: 
 -->
 # core核心
@@ -73,7 +73,13 @@ console.log(node.$script) // null
 ```
 
 ## lifecycle 装饰器
-根据上一节中的介绍，我们知道可以对脚本类或者节点类使用装饰器，可以使同一个脚本管理器 `ScriptManager` 下的所有脚本都共享指定的生命周期名称。
+上一节的演示中包含了 `lifecycle` 装饰器的使用
+
+`lifecycle` 装饰器可以给节点或者节点下的脚本，注册对应的生命周期。
+
+节点或者其管理的任意一个脚本都可以触发生命周期，从而激活该节点下所有脚本的对应生命周期方法。
+
+`lifecycle` 装饰器的使用，以及如何以多种方式激活生命周期的演示如下：
 
 ```ts
 @enabledScript
@@ -83,8 +89,8 @@ class Node implements Scriptable {
 
   func () {
     // 节点中触发生命周期
-    this.$trigger('onA')
-    this.$trigger('onB')
+    this.$trigger('onA') // A is triggered!
+    this.$trigger('onB', 123) // B is triggered! 123 \n I' m another!
   }
 }
 
@@ -93,7 +99,7 @@ class MyScript extends Script {
   func () {
     // 脚本中触发生命周期
     this.trigger('onA') // = this.nodeInstance?.$trigger('onA')
-    this.trigger('onB')
+    this.trigger('onB', 456) // B is triggered! 456 \n I' m another!
   }
 
   onA () {
@@ -105,8 +111,15 @@ class MyScript extends Script {
   }
 }
 
+class AnotherScript extends Script {
+  onB () {
+    console.log('I\' m another!')
+  }
+}
+
 const node = new Node()
 node.$mountScript(MyScript)
+node.$mountScript(AnotherScript)
 ```
 
 # GameModule 游戏基本功能模块

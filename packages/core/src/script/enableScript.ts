@@ -2,7 +2,7 @@
  * @Autor: Guo Kainan
  * @Date: 2021-09-06 14:52:57
  * @LastEditors: Guo Kainan
- * @LastEditTime: 2021-09-13 17:15:13
+ * @LastEditTime: 2021-09-15 15:47:58
  * @Description: 
  */
 import { Script } from './Script'
@@ -88,24 +88,18 @@ export function lifecycle (name: string = '', desc: string = '') {
 
 /**
  * 指定脚本继承哪个模块的生命周期
- * @param module 可以用模块构造函数或者其名称指定其继承哪个模块。不填则继承所有模块
+ * @param module 可以用模块构造函数或者其名称指定其继承哪个模块。不填 或传入 true 则继承所有模块
  */
 export function extendModules (module: Function | string | boolean = true) {
   return function (Constructor: Function) {
-    // true 代表继承所有模块
-    if (module === true) {
-      Constructor.prototype.$extendModules = true
-      return
+    if (typeof module === 'boolean') {
+      Constructor.prototype.$extendModules = module
     }
-
-    if (!!Constructor.prototype.$extendModules) {
-      Constructor.prototype.$extendModules = new Set()
+    else {
+      if (!(Constructor.prototype.$extendModules instanceof Set)) {
+        Constructor.prototype.$extendModules = new Set()
+      }
+      Constructor.prototype.$extendModules.add(module)
     }
-    Constructor.prototype.$extendModules.add(module)
   }
-}
-
-/** 脚本不继承任何模块的生命周期 */
-export function excludeModules (Constructor: Function) {
-  Constructor.prototype.$extendModules = null
 }
