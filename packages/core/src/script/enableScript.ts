@@ -2,7 +2,7 @@
  * @Autor: Guo Kainan
  * @Date: 2021-09-06 14:52:57
  * @LastEditors: Guo Kainan
- * @LastEditTime: 2021-09-15 15:47:58
+ * @LastEditTime: 2021-09-22 10:19:13
  * @Description: 
  */
 import { Script } from './Script'
@@ -18,6 +18,8 @@ export interface Scriptable {
   $mountScript: (script: typeof Script | Script, ...args: any[]) => Script
   /** 触发一个生命周期 */
   $trigger: (name: string, ...args: any[]) => void
+  /** 设置脚本的可用性 */
+  $enableScript: (enabled: boolean) => void
   /** 销毁脚本(所有)，一般用于对象注销 */
   $destroyScript: () => void
 }
@@ -54,6 +56,12 @@ export function enableScript (Constructor: Function) {
       }
     },
 
+    $enableScript (enabled: boolean) {
+      if (this.$scripts) {
+        this.$scripts.setEnabled(enabled)
+      }
+    },    
+
     $destroyScript () {
       if (this.$scripts) {
         this.$scripts.destroy()
@@ -68,38 +76,50 @@ export function enableScript (Constructor: Function) {
 
 /**
  * 注入脚本或模块的生命周期的装饰器
- * @param name 生命周期名称，必须以 on 开头
+ * @param names 生命周期名称列表，必须以 on 开头
  * @param desc 描述
  */
-export function lifecycle (name: string = '', desc: string = '') {
+export function lifecycle (...names: string[]) {
   return function (Constructor: Function) {
-    if (name[0] !== 'o' || name[1] !== 'n') {
-      // 生命周期名称必须以 on 开头
-      console.error(`Invalid lifecycle name: ${name}! Lifecycle name must begin with \'on\'.`)
+    if (names.length <= 0) {
       return
     }
     
     if (!Constructor.prototype.$lifecycles) {
       Constructor.prototype.$lifecycles = new Set()
     }
-    Constructor.prototype.$lifecycles.add(name)
+
+    names.forEach((name: string) => {
+      if (name[0] !== 'o' || name[1] !== 'n') {
+        // 生命周期名称必须以 on 开头
+        console.error(`Invalid lifecycle name: ${name}! Lifecycle name must begin with \'on\'.`)
+      }
+      else {
+        Constructor.prototype.$lifecycles.add(name)  
+      }
+    })
   }
 }
 
 /**
  * 指定脚本继承哪个模块的生命周期
- * @param module 可以用模块构造函数或者其名称指定其继承哪个模块。不填 或传入 true 则继承所有模块
+ * @param modules 可以用模块构造函数或者其名称指定其继承哪个模块。首项传入 true 则继承所有模块，不填参数 或 首项传入 false 则不继承任何模块
  */
-export function extendModules (module: Function | string | boolean = true) {
+export function extendModules (...modules: (Function | string | boolean)[]) {
   return function (Constructor: Function) {
-    if (typeof module === 'boolean') {
+    if (modules.length <= 0) {
+      return
+    }
+    else if (typeof modules[0] === 'boolean') {
       Constructor.prototype.$extendModules = module
     }
     else {
-      if (!(Constructor.prototype.$extendModules instanceof Set)) {
-        Constructor.prototype.$extendModules = new Set()
-      }
-      Constructor.prototype.$extendModules.add(module)
+      if (!Array.isArray(Constructor.prototype.$extendModules)) {
+        Constructor.prototype.$extendModules = []
+      }      
+      modules.forEach((module) => {
+        Constructor.prototype.$extendModules.push(module)        
+      })
     }
   }
 }

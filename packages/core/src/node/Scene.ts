@@ -2,7 +2,7 @@
  * @Autor: Guo Kainan
  * @Date: 2021-09-07 19:09:46
  * @LastEditors: Guo Kainan
- * @LastEditTime: 2021-09-13 16:40:07
+ * @LastEditTime: 2021-09-22 11:41:24
  * @Description: 场景节点
  */
 import { GameModule } from '../GameModule'
@@ -38,11 +38,20 @@ export class Scene extends Layer {
 
   }
 
-  /** 为场景中的内容增减场景索引 */
-  onChildAdded (triggerNode: Container, child: Container) {
-    child.Scene = this
+  /** 场景中有节点添加 */
+  onAdded (node: Container, addTo: Container) {
+    // 从被添加的节点开始，向下深入
+    node.deepTrave((n: Container) => {
+      // 记录场景节点
+      n.Scene = this
+    })
   }
-  onChildRemoved (triggerNode: Container, child: Container) {
-    child.Scene = null
+  /** 场景中有节点移除 */
+  onRemoved (node: Container, removeFrom: Container) {
+    // 从被删除的节点开始，向下深入
+    node.deepTrave((n: Container) => {
+      // 取消记录场景节点
+      n.Scene = null
+    })
   }
 }

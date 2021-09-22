@@ -2,7 +2,7 @@
  * @Autor: Guo Kainan
  * @Date: 2021-09-05 15:18:23
  * @LastEditors: Guo Kainan
- * @LastEditTime: 2021-09-15 15:47:14
+ * @LastEditTime: 2021-09-22 14:44:41
  * @Description: 脚本对象基类
  */
 import { game, Game, GameLifecycle } from '../Game'
@@ -19,7 +19,7 @@ export class Script {
   /** 扩充的脚本生命周期 */
   $lifecycles?: Set<string>
   /** 指定脚本继承哪些模块的能力 */
-  $extendModules?: Set<string | Function> | boolean
+  $extendModules?: (string | Function)[] | boolean
   /** 配合Game装饰器，对游戏实例的引用 */
   Game!: Game
 
@@ -29,18 +29,31 @@ export class Script {
   }
 
   /** 脚本是否激活，初始激活 */
-  enabled: boolean
-  
+  _enabled: boolean = false
+  get enabled (): boolean {
+    return this._enabled
+  }
+  set enabled (val: boolean) {
+    if (val === this._enabled) { return }
+    this._enabled = val
+    if (val) {
+      this.onEnabled()
+    }
+    else {
+      this.onDisabled()
+    }
+  }
 
   constructor (...args: any[]) {
-    this.enabled = true
-
     this._initScript()
   }
 
   /** 初始化脚本，挂载到游戏模块上，以继承基础功能 */
   private _initScript () {
-    this.Game.$trigger(GameLifecycle.onScriptInit, this)
+    // 若 $extendModules 未指定或者指定为 false，脚本不继承任何模块能力，甚至不会触发对应的生命周期
+    if (this.$extendModules) {
+      this.Game.$trigger(GameLifecycle.onScriptInit, this)
+    }
   }
 
   /** 脚本挂载到某个管理器 */
@@ -105,4 +118,8 @@ export class Script {
   onActive () {}
   /** 脚本固有生命周期，被管理节点卸载前触发 */
   onDestroy () {}
+  /** 脚本固有生命周期，被启用时触发 */
+  onEnabled () {}
+  /** 脚本固有生命周期，被禁用时触发 */
+  onDisabled () {}
 }

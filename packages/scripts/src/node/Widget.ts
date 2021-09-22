@@ -2,7 +2,7 @@
  * @Autor: Guo Kainan
  * @Date: 2021-09-14 16:43:01
  * @LastEditors: Guo Kainan
- * @LastEditTime: 2021-09-15 18:20:38
+ * @LastEditTime: 2021-09-22 18:15:28
  * @Description: 相对布局脚本
  */
 import { 
@@ -14,10 +14,16 @@ import {
 
 import { ScreenFix } from '@yhgame/modules'
 import { percentToNum } from '@yhgame/shared'
-import { Rectangle } from 'pixi.js'
+import { Rectangle, IPointData } from 'pixi.js'
 
 /** 节点相对布局更新的模式 */
-export type WidgetUpdateMode = 'added' | 'resize'
+export type WidgetUpdateMode = 'common' | 'resize'
+
+/** 计算相对布局使用的坐标点接口 */
+export interface WidgetPoint {
+  x?: number | null,
+  y?: number | null
+}
 
 /** 相对布局配置 */
 export interface WidgetRelative {
@@ -35,26 +41,30 @@ export enum WidgetLifecycle {
   onWidgetUpdate = 'onWidgetUpdate'
 }
 
-@lifecycle(WidgetLifecycle.onWidgetUpdate, '调整节点的相对布局时触发')
+@lifecycle(
+  WidgetLifecycle.onWidgetUpdate // 调整节点的相对布局时触发
+)
 @extendModules(ScreenFix)
 export class Widget extends Script {
   /**
    * 节点相对布局更新的模式
-   * added 只在节点被添加到容器时触发布局更新
-   * resize 不仅在添加时触发，还在屏幕尺寸发生变化时触发布局更新
+   * common 只有节点进入舞台(即被激活时 onEnabled)，或是通过 API 修改布局信息时，触发更新
+   * resize 不仅包括上面的触发方式，还在屏幕尺寸发生变化时触发布局更新
    * frame 每帧都触发布局更新，感觉没必要又耗性能，暂时不支持
    */
   private _updateMode: WidgetUpdateMode = 'resize'
 
   /** 当前相对布局信息 */
   private _relative: WidgetRelative = {}
+  /** 当前相对布局有效选项 */
+  private _relativeOptions: WidgetRelative = {}
 
   /** 根据相对布局信息计算出的，需要设置给容器的宽高，为null时将容器宽高还原为实际值(拉伸前) localBounds.width / localBounds.height */
-  private _width: number | null = null
-  private _height: number | null = null
+  private _width: number = 0
+  private _height: number = 0
   /** 根据相对布局信息计算出的，需要设置给容器的位置，为null时不对容器进行赋值 */
-  private _x: number | null = null
-  private _y: number | null = null
+  private _x: number = 0
+  private _y: number = 0
 
   /** 获取屏幕适配模块实例，相对布局组件强依赖于屏幕适配模块 */
   get screenFix (): ScreenFix {
@@ -79,34 +89,16 @@ export class Widget extends Script {
     return this.Node.getLocalBounds()
   }
 
-  /** 是否还在舞台上 */
-  get isOnStage (): boolean {
-    // 父节点溯源，根节点是舞台代表节点在舞台上
-    let cur = this.Node
-    while (cur.parent) {
-      cur = cur.parent
-    }
-    return cur === this.Game.Stage
-  }
-
 
   constructor (relative: WidgetRelative = {}, mode: WidgetUpdateMode = 'resize') {
     super()
 
     this._updateMode = mode
-    this.setRelative(relative)
+    this._resolveRelative(relative)
   }
 
-  onActive () {
-    this.Node.on('added', this._addHandler, this)
-  }
-
-  onDestroy () {
-    this.Node.off('added', this._addHandler, this)
-  }
-
-  /** 节点加入容器时触发，此时计算屏幕 */
-  private _addHandler () {
+  /** 节点进入舞台后触发更新，此时计算屏幕 */
+  onEnabled () {
     this.update()
   }
 
@@ -119,7 +111,8 @@ export class Widget extends Script {
 
   /** 更新相对布局信息 */
   update () {
-    this.setRelative(this._relative)
+    // 原地更新
+    this.setRelative(this._relativeOptions)
   }
 
   /**
@@ -135,11 +128,11 @@ export class Widget extends Script {
    * 水平方向上，left right centerX
    * - 如果三者都存在则centerX被忽略，由 left right 确定宽度。
    * - 如果有其二则能够确定宽度，宽度将被拉伸为确定值。
-   * - 如果只有其一或者都不具有，则无法确定宽度。当三者均无时，强行设置 left = 0
+   * - 如果只有其一或者都不具有，则无法确定宽度。
    * 竖直方向上，top bottom centerY ，的规则与水平方向类似。
    * - 如果三者都存在则centerY被忽略，由 top bottom 确定宽度。
    * - 如果有其二则能够确定高度，高度将被拉伸为确定值。
-   * - 如果只有其一或者都不具有，则无法确定宽度。当三者均无时，强行设置 top = 0
+   * - 如果只有其一或者都不具有，则无法确定宽度。
    * *********************************************************
    * 宽度和高度是否被确定，会按照以下规则决定容器的实际尺寸
    * - 如果两者都无法确定，则容器维持原可视区域的尺寸
@@ -154,6 +147,8 @@ export class Widget extends Script {
 
   /** 解析并更新相对布局配置项 */
   private _resolveRelative (relative: WidgetRelative = {}) {
+    this._relativeOptions = relative
+
     RELATIVE_KEYS.forEach((key) => {
       const value = relative[key]
       if (typeof value === 'string') {
@@ -165,8 +160,8 @@ export class Widget extends Script {
         else {
           // 将百分比转换为具体偏移量
           let base = (key === 'top' || key === 'centerY' || key === 'bottom') ? 
-            this.screenFix.canvasWidth : this.screenFix.canvasHeight
-          if (key.indexOf('center')) {
+            this.screenFix.canvasHeight : this.screenFix.canvasWidth
+          if (key.indexOf('center') >= 0) {
             base /= 2
           }
           this._relative[key] = base * percent
@@ -179,44 +174,140 @@ export class Widget extends Script {
         delete this._relative[key]
       }
     })
-
-    // 三选0的情况下至少补上一个基础属性
-    if (
-      typeof this._relative.top !== 'number' &&
-      typeof this._relative.bottom !== 'number' &&
-      typeof this._relative.centerY !== 'number'
-    ) {
-      this._relative.top = 0
-    }
-    if (
-      typeof this._relative.left !== 'number' &&
-      typeof this._relative.right !== 'number' &&
-      typeof this._relative.centerX !== 'number'
-    ) {
-      this._relative.left = 0
-    }
   }
 
   /** 根据当前相对布局信息，更新位置与尺寸信息 */
   private _resolvePosition () {
-    if (!this.Node.parent) {
+    // 不在舞台上，无法计算
+    if (!this.Node.Stage) { return }
 
+    const parent = this.Node.parent
+    const global = parent.toGlobal({
+      x: this.Node.x,
+      y: this.Node.y
+    })
+    const { top, bottom, centerY, left, right, centerX } = this._relative
+    const { canvasWidth, canvasHeight, shouldRotateStage } = this.screenFix
+
+    // 定左上坐标，竖直方向
+    if (typeof top === 'number') {
+      if (shouldRotateStage) { global.x = canvasHeight - top }
+      else { global.y = top }
+    }
+    else if (typeof bottom === 'number') {
+      if (shouldRotateStage) { global.x = bottom }
+      else { global.y = canvasHeight - bottom }
+    }
+    else if (typeof centerY === 'number') {
+      if (shouldRotateStage) { global.x = (canvasHeight / 2) - centerY }
+      else { global.y = (canvasHeight / 2) + centerY }
+    }
+
+    // 定左上坐标，水平方向
+    if (typeof left === 'number') {
+      if (shouldRotateStage) { global.y = left }
+      else { global.x = left }
+    }
+    else if (typeof right === 'number') {
+      if (shouldRotateStage) { global.y = canvasWidth - right }
+      else { global.x = canvasWidth - right }
+    }
+    else if (typeof centerX === 'number') {
+      if (shouldRotateStage) { global.y = (canvasWidth / 2) + centerX }
+      else { global.x = (canvasWidth / 2) + centerX }
+    }
+
+    // 坐标确定完成
+    const local = parent.toLocal(global)
+    this._x = local.x
+    this._y = local.y
+
+    // 继续确定尺寸
+    this._resolveSize(global)
+
+    
+    console.log('相对布局信息', top, bottom, centerY, left, right, centerX)
+    console.log('画布信息', canvasWidth, canvasHeight, shouldRotateStage)
+    console.log('节点信息', this.Node, this.localBounds)
+    console.log('坐标信息', global, local)
+    console.log('尺寸信息', this._width, this._height)
+    
+  }
+
+  /** 由相对布局信息计算尺寸，global为左上角的画布坐标 */
+  private _resolveSize (global: IPointData) {
+    const { top, bottom, centerY, left, right, centerX } = this._relative
+    const { canvasWidth, canvasHeight, shouldRotateStage } = this.screenFix
+    // 容器末端(最 右/下 端)的横纵坐标，用于定宽高
+    let globalEnd = { x: global.x, y: global.y }
+    // 是否确定宽高
+    let isHorSet = true, isVerSet = true
+
+    if (typeof left === 'number' && typeof right === 'number') {
+      if (shouldRotateStage) { globalEnd.y = canvasWidth - left - right + global.y }
+      else { globalEnd.x = canvasWidth - left - right + global.x }
+    }
+    else if (typeof left === 'number' && typeof centerX === 'number') {
+      if (shouldRotateStage) { globalEnd.y = canvasWidth / 2 + centerX - left + global.y }
+      else { globalEnd.x = canvasWidth / 2 + centerX - left + global.x }
+    }
+    else if (typeof right === 'number' && typeof centerX === 'number') {
+      if (shouldRotateStage) { globalEnd.y = canvasWidth / 2 - centerX - right + global.y }
+      else { globalEnd.x = canvasWidth / 2 - centerX - right + global.x }
+    }
+    else { isHorSet = false }
+
+    if (typeof top === 'number' && typeof bottom === 'number') {
+      if (shouldRotateStage) { globalEnd.x = bottom }
+      else { globalEnd.y = canvasHeight - top - bottom + global.y }
+    }
+    else if (typeof top === 'number' && typeof centerY === 'number') {
+      if (shouldRotateStage) { globalEnd.x = global.y - canvasHeight / 2 + top - centerY }
+      else { globalEnd.y = canvasHeight / 2 + centerY - top + global.y }
+    }
+    else if (typeof bottom === 'number' && typeof centerY === 'number') {
+      if (shouldRotateStage) { globalEnd.x = bottom }
+      else { globalEnd.y = canvasHeight / 2 - centerY - bottom + global.y }
+    }
+    else { isVerSet = false }
+
+    // 正式定宽高
+    const parent = this.Node.parent
+    const localEnd = parent.toLocal(globalEnd)
+    const dw = localEnd.x - this._x
+    const dh = localEnd.y - this._y
+    if (isHorSet && isVerSet) {
+      // 宽高均确定，强制拉伸
+      this._width = dw
+      this._height = dh
+    }
+    else if (isHorSet && !isVerSet) {
+      // 定宽，高度自适应
+      this._width = dw
+      this._height = this._width * (this.localBounds.height / this.localBounds.width)
+    }
+    else if (!isHorSet && isVerSet) {
+      // 定高，宽度自适应
+      this._height = dh
+      this._width = this._height * (this.localBounds.width / this.localBounds.height)
+    }
+    else {
+      // 宽高都无法确定，则与可视区域宽高保持一致
+      this._width = this.localBounds.width
+      this._height = this.localBounds.height
     }
   }
 
   /** 根据位置与尺寸信息，更新容器 */
   private _update () {
-    // 节点不可见，没必要更新布局
-    if (!this.isOnStage) { return }
+    // 不在舞台上，无法设置
+    if (!this.Node.Stage) { return }
 
     /** @alarm 强制使pivot归0，原则上使用相对布局的容器不能够设置pivot，也不能自行设置 x y width height */
     this.Node.pivot.set(0, 0)
-    /** 尺寸信息为null时将容器宽高还原为实际值(拉伸前) localBounds.width / localBounds.height */
-    this.Node.width = typeof this._width === 'number' ? this._width : this.localBounds.width
-    this.Node.height = typeof this._height === 'number' ? this._height : this.localBounds.height
-    /** 位置信息为null时不对容器进行赋值 */
-    if (typeof this._x === 'number') { this.Node.x = this._x }
-    if (typeof this._y === 'number') { this.Node.y = this._y }
+    this.Node.width = this._width
+    this.Node.height = this._height
+    this.Node.position.set(this._x, this._y)
 
     this.trigger(WidgetLifecycle.onWidgetUpdate, this)
   }

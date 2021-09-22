@@ -2,16 +2,10 @@
  * @Autor: Guo Kainan
  * @Date: 2021-09-08 13:46:57
  * @LastEditors: Guo Kainan
- * @LastEditTime: 2021-09-14 17:26:08
+ * @LastEditTime: 2021-09-22 11:37:26
  * @Description: 屏幕适配模块
  */
-import { 
-  GameModule, 
-  RelativeContainer,
-  Script,
-  lifecycle,
-  ScreenFix as IScreenFix
-} from '@yhgame/core'
+import { GameModule, lifecycle } from '@yhgame/core'
 import { Renderer, AbstractRenderer } from 'pixi.js'
 
 /** 屏幕适配参数 */
@@ -31,14 +25,14 @@ export enum ScreenFixLifecycle {
   onScreenResize = 'onScreenResize'
 }
 
-@lifecycle(ScreenFixLifecycle.onScreenResize, '屏幕尺寸发生改变时触发')
-export class ScreenFix extends GameModule implements IScreenFix {
+@lifecycle(
+  ScreenFixLifecycle.onScreenResize // 屏幕尺寸发生改变时触发
+)
+export class ScreenFix extends GameModule {
   /** 画布 */
   private _renderer: Renderer | AbstractRenderer
   /** 配置项 */
   private _options: ScreenFixOption
-  /** 相对布局容器 */
-  private _relativeContainers: Set<RelativeContainer> = new Set()
 
   /** 屏幕宽 */
   get screenWidth (): number { return self.innerWidth }
@@ -125,7 +119,6 @@ export class ScreenFix extends GameModule implements IScreenFix {
   private _resizeHandler () {
     console.log('resize')
     this._resizeStage()
-    this._renderRelativeContainers()
 
     // 向上向下都触发事件
     this.$trigger(ScreenFixLifecycle.onScreenResize)
@@ -184,20 +177,5 @@ export class ScreenFix extends GameModule implements IScreenFix {
     stage.position.set(posX, posY)
     stage.rotation = rotation
     stage.scale.set(scaleX, scaleY)
-  }
-
-  // 调整相对容器的位置
-  private _renderRelativeContainers () {
-    this._relativeContainers.forEach((container: RelativeContainer) => {
-      container.updatePosition()
-    })
-  }
-  /** 添加相对容器 */
-  addRelativeContainer (container: RelativeContainer) {
-    this._relativeContainers.add(container)
-  }
-  /** 删除相对容器 */
-  removeRelativeContainer (container: RelativeContainer) {
-    this._relativeContainers.delete(container)
   }
 }

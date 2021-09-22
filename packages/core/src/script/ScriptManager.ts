@@ -2,7 +2,7 @@
  * @Autor: Guo Kainan
  * @Date: 2021-09-05 23:42:14
  * @LastEditors: Guo Kainan
- * @LastEditTime: 2021-09-15 15:46:50
+ * @LastEditTime: 2021-09-22 10:24:31
  * @Description: 脚本管理器
  */
 import { Script } from './Script'
@@ -99,7 +99,11 @@ export class ScriptManager {
     script.unmountFrom(this)
   }
 
-  /** 寻找某个脚本 */
+  /**
+   * 寻找某个脚本
+   * @param key 脚本的 构造函数名称 或者 构造函数
+   * @returns 
+   */
   find<T extends typeof Script> (key: string | T): InstanceType<T> | Script | undefined {
     const scripts = this._scripts
     for (let script of scripts) {
@@ -127,5 +131,12 @@ export class ScriptManager {
     if (this._sourceTarget) {
       this._sourceTarget = null      
     }
+  }
+
+  /** 设置所有脚本的可用性 */
+  setEnabled (enabled: boolean) {
+    this._scripts.forEach((script: Script) => {
+      script.enabled = enabled
+    })
   }
 }

@@ -2,7 +2,7 @@
  * @Autor: Guo Kainan
  * @Date: 2021-09-05 15:18:51
  * @LastEditors: Guo Kainan
- * @LastEditTime: 2021-09-13 14:50:31
+ * @LastEditTime: 2021-09-22 11:27:32
  * @Description: 游戏实例
  */
 import { 
@@ -17,6 +17,7 @@ import { Script } from './script/Script'
 import { ScriptManager } from './script/ScriptManager'
 import { Scriptable, enableScript, lifecycle } from './script/enableScript'
 import { Container } from './node/pixiNodeExtend'
+import { Stage } from './node/Stage'
 import { GameModule } from './GameModule'
 
 /** 游戏配置项 */
@@ -56,20 +57,31 @@ export enum GameLifecycle {
 }
 
 @enableScript
-@lifecycle(GameLifecycle.onModuleBeforeMount, '模块挂载前')
-@lifecycle(GameLifecycle.onModuleMounted, '模块挂载后')
-@lifecycle(GameLifecycle.onGameStart, '游戏开始')
-@lifecycle(GameLifecycle.onScriptInit, '游戏中有脚本完成了初始化')
+@lifecycle(
+  GameLifecycle.onModuleBeforeMount, // 模块挂载前
+  GameLifecycle.onModuleMounted, // 模块挂载后
+  GameLifecycle.onGameStart, // 游戏开始
+  GameLifecycle.onScriptInit, // 游戏中有脚本完成了初始化
+)
 export class Game implements Scriptable {
   /** 单例引用 */
   static __GameInstance__: Game | null = null
-  /** 暂存游戏模块参数 */
-  static _modules: Map<typeof GameModule, any[]> = new Map()
+  /** 暂存游戏模块参数与原型 */
+  static _modules: Map<
+    typeof GameModule, 
+    { args: any[], Base: typeof GameModule | null }
+  > = new Map()
+  /** 缓存模块原型，避免重复注册同功能模块 */
+  static _baseModules: Set<typeof GameModule> = new Set()
 
   /** PixiJS App实例 */
   private _app!: Application
+
   /** 各种游戏模块的索引 */
   private _modules: Map<string, GameModule> = new Map()
+  /** 游戏模块基础原型的索引 */
+  private _baseToModules: Map<string, GameModule> = new Map()
+
   /** 配置项 */
   readonly options!: Required<GameOptions>
 
@@ -82,6 +94,8 @@ export class Game implements Scriptable {
   $mountScript!: (script: typeof Script | Script, ...args: any[]) => Script
   /** 触发一个生命周期 */
   $trigger!: (name: string, ...args: any[]) => void
+  /** 设置脚本的可用性 */
+  $enableScript!: (enabled: boolean) => void
   /** 销毁脚本(所有)，一般用于对象注销 */
   $destroyScript!: () => void
 
@@ -95,11 +109,13 @@ export class Game implements Scriptable {
 
     this.options = _resolveGameOptions(options)
 
+    // 初始化PIXI
     this._app = new Application({
       resizeTo: self
     })
+    this._app.stage = new Stage()
 
-    // 初始化模块
+    // 初始化游戏模块
     this._initModules()
 
     // 挂载画布
@@ -118,11 +134,20 @@ export class Game implements Scriptable {
     Module: T,
     ...args: any[]
   ) {
-    if (Game._modules.get(Module)) {
-      throw new Error(`Duplicated module found: ${Module.name}.`)
+    // 模块可能拓展继承了基础模块原型，因此也要检查并保存基础原型，避免不合法与重复
+    const Base = Module.getBaseModule()
+    if (!Base) {
+      throw new Error(`Invalid module found: ${Module.name}! A module should extend GameModule class.`)
+    }
+    if (Base === GameModule) {
+      throw new Error(`Invalid module found: ${Module.name}! Abstract module should be extended.`)
+    }
+    if (Game._baseModules.has(Base)) {
+      throw new Error(`Duplicated module found: ${Module.name}. Base module ${Base.name} has been registered.`)
     }
 
-    Game._modules.set(Module, args)
+    Game._modules.set(Module, { args, Base })
+    Game._baseModules.add(Base)
   }
 
   get App (): Application {
@@ -147,11 +172,22 @@ export class Game implements Scriptable {
 
   /** 初始化各种游戏控制模块 */
   private _initModules () {
-    Game._modules.forEach((args: any[], Module: typeof GameModule) => {
+    // 允许各模块使用脚本
+    this.$enableScript(true)
+
+    // 挂载各模块实例
+    Game._modules.forEach((obj, Module) => {
+      const { args, Base } = obj
       const name = Module.name
       const module = new Module(...args)
       this.$mountScript(module)
       this._modules.set(name, module)
+
+      // 也要记录 模块原型 -> 模块实例 的索引
+      const baseName = Base ? Base.name : null
+      if (baseName) {
+        this._baseToModules.set(baseName, module)
+      }
     })
   }
 
@@ -169,17 +205,30 @@ export class Game implements Scriptable {
     this.$trigger(GameLifecycle.onModuleMounted)
   }
 
-  /** 获取模块，可以用名称或者构造函数获取 */
-  module <T extends typeof GameModule>(key: string | T): InstanceType<T> | GameModule | undefined {
-    if (typeof key === 'string') {
-      return this._modules.get(key)
-    }
-    return this._modules.get(key.name)
+  /**
+   * 获取模块，可以用名称或者构造函数获取
+   * 如果一个模块以继承的方式拓展了原型模块，也可以通过原型模块
+   * @param key 
+   * @returns 
+   */
+  module<T extends typeof GameModule> (key: string | T): InstanceType<T> | GameModule | undefined {
+    const moduleIndex = typeof key === 'string' ? key : key.name
+    return this._modules.get(moduleIndex) || this._baseToModules.get(moduleIndex)
   }
 
   /** 遍历所有模块 */
   traveModules (callback: (module: GameModule) => void) {
     this._modules.forEach((module: GameModule) => callback(module))
+  }
+
+  /** 判断某一个节点是否在舞台上 */
+  isOnStage (node: Container) {
+    // 父节点溯源，根节点是舞台代表节点在舞台上
+    let cur = node
+    while (cur.parent) {
+      cur = cur.parent
+    }
+    return cur === this.Stage
   }
 
   /** 开始游戏 */

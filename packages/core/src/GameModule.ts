@@ -2,7 +2,7 @@
  * @Autor: Guo Kainan
  * @Date: 2021-09-05 19:27:16
  * @LastEditors: Guo Kainan
- * @LastEditTime: 2021-09-14 17:18:26
+ * @LastEditTime: 2021-09-22 11:08:51
  * @Description: 游戏功能模块
  */
 import { Game, game } from './Game'
@@ -35,11 +35,28 @@ export class GameModule extends Script implements Scriptable {
   $mountScript!: (script: typeof Script | Script, ...args: any[]) => Script
   /** 触发一个生命周期 */
   $trigger!: (name: string, ...args: any[]) => void
+  /** 设置脚本的可用性 */
+  $enableScript!: (enabled: boolean) => void
   /** 销毁脚本(所有)，一般用于对象注销 */
   $destroyScript!: () => void
   
   constructor (...args: any[]) {
     super()
+
+    this.enabled = true
+  }
+
+  /** 获取原型模块。原型模块即继承 GameModule 的第一级构造函数对象 */
+  static getBaseModule (): typeof GameModule | null {
+    if (this === GameModule) { return GameModule }
+
+    let cur = this
+    let next = Object.getPrototypeOf(this)
+    while (next !== GameModule && next) {
+      cur = next
+      next = Object.getPrototypeOf(next)
+    }
+    return next ? cur : null
   }
 
   get name (): string {
@@ -79,6 +96,8 @@ export class GameModule extends Script implements Scriptable {
       return false
     }
     // 指定模块挂载
-    return extendModules.has(this.name) || extendModules.has(this.constructor)
+    return extendModules.find((m) => {
+      return m === this.name || this instanceof (m as Function)
+    }) ? true : false
   }
 }
